@@ -20,3 +20,12 @@ Threads: 16
 1D Time: 8.444911 seconds
 2D Time: 12.515735 seconds
 ----------------
+
+----------------
+BONUS: Optimized Run (-O3)
+1 Thread (Optimized):
+1D Time: 0.357153 seconds
+2D Time: 0.672284 seconds
+16 Threads (Optimized):
+1D Time: 0.061895 seconds
+2D Time: 0.108782 seconds
