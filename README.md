@@ -5,7 +5,7 @@
 
 ---
 
-## 📌 Project Overview
+##  Project Overview
 This project implements a high-performance parallel algorithm to calculate the **Pearson Correlation Coefficient** between every pair of vectors in a large dataset. 
 
 Given `m` input vectors each with `n` elements, the goal is to compute an `m x m` correlation matrix. The baseline implementation is compared against a highly optimized parallel version using **OpenMP**, **AVX2 Vectorization**, and **Algebraic Simplification**.
@@ -19,7 +19,7 @@ Instead of computing the full correlation formula inside the $O(M^2)$ loop, I us
 
 ---
 
-## 📊 Performance Analysis
+##  Performance Analysis
 
 The graph below shows the speedup achieved by the parallel implementation compared to the sequential baseline.
 
@@ -33,7 +33,7 @@ The graph below shows the speedup achieved by the parallel implementation compar
 
 ---
 
-## 🛠️ How to Build & Run
+##  How to Build & Run
 
 ### Prerequisites
 * GCC/G++ Compiler with OpenMP support
