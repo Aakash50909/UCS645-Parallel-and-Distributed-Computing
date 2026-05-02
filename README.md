@@ -1,14 +1,14 @@
 # UCS645: Parallel & Distributed Computing
 
 **Student:** Aakash Chandra — 102317242 | 3Q24
-**System:** Pop!_OS (Linux) | AMD Ryzen 7 5800HS (16 Logical Processors)
-**Compilers:** GCC/G++ (OpenMP + AVX2) · mpicc (MPICH)
+**System:** Pop!_OS (Linux) | AMD Ryzen 7 5800HS (16 Logical Processors) | NVIDIA RTX 3050 Laptop GPU (35W)
+**Compilers:** GCC/G++ (OpenMP + AVX2) · mpicc (MPICH) · nvcc (CUDA 12.x)
 
 ---
 
 ## Repository Structure
 
-This repository contains all lab assignments for UCS645, organized by branch. The first three assignments cover shared-memory parallelism with **OpenMP**; the final two cover distributed-memory parallelism with **MPI**.
+This repository contains all lab assignments for UCS645, organized by branch. The first three assignments cover shared-memory parallelism with **OpenMP**, the next two cover distributed-memory parallelism with **MPI**, and the final three cover **GPU programming with CUDA**.
 
 | Branch | Assignment | Paradigm | Topic |
 |---|---|---|---|
@@ -17,6 +17,9 @@ This repository contains all lab assignments for UCS645, organized by branch. Th
 | `assignment3/openmp-advanced` | Assignment 3 | OpenMP | Advanced OpenMP (SIMD / synchronization) |
 | `assignment4/mpi-intro` | Assignment 4 | MPI | Introduction to MPI — Point-to-Point & Collectives |
 | `assignment5/mpi-advanced` | Assignment 5 | MPI | Blocking vs Non-Blocking · Master-Slave · Amdahl's Law |
+| `assignment6/cuda-intro` | Assignment 6 | CUDA | Device Query · Array Sum · Matrix Addition |
+| `assignment7/cuda-kernels` | Assignment 7 | CUDA | Thread Tasks · Merge Sort · Vector Add + Bandwidth |
+| `assignment8/cuda-ml` | Assignment 8 | CUDA | GPU-Accelerated ML — Reductions · Activations · CNN |
 
 ---
 
@@ -46,7 +49,7 @@ Two problems demonstrating different parallelization strategies:
 
 ### Assignment 3 — OpenMP: Advanced Topics
 
-*(See branch `lab3-submission' for more details)*
+*(See branch `lab3-submission` for more details)*
 
 ---
 
@@ -73,6 +76,38 @@ Five questions covering non-blocking I/O, collective operations, and master-slav
 
 ---
 
+### Assignment 6 — CUDA: Introduction
+
+Three parts introducing GPU programming fundamentals on the RTX 3050 Laptop (sm_86, 4 GB VRAM):
+
+- **Part A — Device Query**: Queries and explains 10 GPU properties — compute capability (8.6 / Ampere), max block dimensions (1024×1024×64), warp size (32), shared memory (48 KB/block), global memory (4 GB), constant memory (64 KB), and double precision support
+- **Part B — Array Sum**: Parallel reduction using shared memory tree (stride halving); 256 threads/block; partial sums merged on host
+- **Part C — Matrix Addition**: One thread per element; 512×512 matrix with 16×16 blocks; analyzes FLOP count (262K adds), global reads (524K), and global writes (262K)
+
+---
+
+### Assignment 7 — CUDA: Kernels & Profiling
+
+Three problems building practical CUDA programming skills:
+
+- **Problem 1 — Multi-task threads**: Two threads run simultaneously — Thread 0 computes the sum of 1..1024 iteratively; Thread 1 uses the direct formula. Both produce 524800.
+- **Problem 2 — Merge Sort**: Pipelined bottom-up CPU merge sort vs CUDA parallel merge sort (N=1000). Different thread blocks handle separate merge pairs in parallel. Includes timing comparison — PCIe overhead typically makes CPU faster at this size, which is expected and discussed.
+- **Problem 3 — Vector Add + Bandwidth**: Uses static `__device__` globals (no `cudaMalloc`). Measures kernel execution time via CUDA events, computes **theoretical bandwidth** from `memoryClockRate × memoryBusWidth × 2`, computes **measured bandwidth** from bytes transferred divided by time, and prints both for comparison.
+
+---
+
+### Assignment 8 — CUDA: GPU-Accelerated Machine Learning
+
+Five exercises building from low-level CUDA to a full CNN training pipeline:
+
+- **EX01 — CUDA Basics**: Bandwidth benchmark (1–512 MB H2D/D2H), CPU vs GPU speedup table for N=2¹⁰ to 2²⁶ with crossover analysis, thread block size sweep (64/128/256/512/1024), warp divergence timing experiment
+- **EX02 — Memory Hierarchy**: Three reduction strategies (naive single-thread / shared memory tree / warp shuffle with `__shfl_down_sync`), bank conflict profiling at strides 1–32, `tile[16][17]` padding fix, shared-memory histogram vs global atomicAdd
+- **EX03 — ML Primitives**: Forward kernels for sigmoid, tanh, leaky ReLU, ReLU backward; numerically stable cross-entropy (log-sum-exp trick); CE gradient kernel (`softmax − one_hot`); fused Adam optimizer (single kernel, no intermediate allocations). All verified against PyTorch with atol ≤ 1e-4.
+- **EX04 — Tiled GEMM & CNN Layers**: Tiled matrix multiply (TILE=16) vs naive GPU vs cuBLAS across sizes 128–2048, GFLOPS reported; MaxPool 2×2 and BatchNorm inference benchmarked on [32, 64, 14, 14] tensors; roofline analysis
+- **EX05 — Full MNIST CNN**: PyTorch training pipeline with 4-config ablation study (Baseline / +BatchNorm / +Dropout / SGD+CosineAnnealingLR), data augmentation (RandomRotation + RandomAffine + RandomErasing), and AMP training with `autocast` + `GradScaler`. Target: ≥97% test accuracy.
+
+---
+
 ## Quick Start
 
 ### OpenMP assignments (1–3)
@@ -87,17 +122,41 @@ Compiler flags used: `-O3 -fopenmp -mavx2 -mfma`
 ### MPI assignments (4–5)
 
 ```bash
-# Install MPICH if needed
 sudo apt-get install mpich
 
 git checkout assignment4/mpi-intro   # or assignment5/mpi-advanced
 make
 
-# Run any target (example)
 mpirun -np 4 ./ring_comm
 ```
 
 Each assignment directory contains its own `Makefile` with individual `run_*` targets and a `run_all` target.
+
+### CUDA assignments (6–8)
+
+```bash
+# Check your GPU's compute capability first
+nvidia-smi
+
+git checkout assignment6/cuda-intro   # or assignment7, assignment8
+make
+```
+
+Compile flags used: `-O2 -arch=sm_86` (change `sm_86` to match your GPU — see table below)
+
+| GPU | arch flag |
+|---|---|
+| GTX 1060 / 1080 | `sm_61` |
+| RTX 2080 | `sm_75` |
+| RTX 3050 / 3090 | `sm_86` |
+| RTX 4090 | `sm_89` |
+
+For Assignment 8 EX05 (Python/PyTorch):
+
+```bash
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+python ex05/ex05_mnist_cnn.py
+```
 
 ---
 
@@ -108,5 +167,9 @@ Each assignment directory contains its own `Makefile` with individual `run_*` ta
 | GCC/G++ with `-fopenmp` | Shared-memory parallelism (Assignments 1–3) |
 | `-O3 -mavx2 -mfma` | Auto-vectorization + SIMD FMA instructions |
 | mpicc (MPICH) | Distributed-memory parallelism (Assignments 4–5) |
-| `omp_get_wtime()` / `MPI_Wtime()` | High-resolution wall-clock timing |
+| nvcc (CUDA Toolkit 12.x) | GPU kernel compilation (Assignments 6–8) |
+| cuBLAS | Optimized GPU matrix multiplication (Assignment 8 EX04) |
+| PyTorch + torchvision | CNN training and reference validation (Assignment 8 EX05) |
+| `omp_get_wtime()` / `MPI_Wtime()` | High-resolution wall-clock timing (OpenMP / MPI) |
+| CUDA Events (`cudaEventRecord`) | High-resolution GPU kernel timing (CUDA) |
 | Amdahl's Law | Theoretical speedup ceiling and parallel fraction analysis |
